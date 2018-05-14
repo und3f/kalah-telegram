@@ -15,6 +15,8 @@ class Bot
 
     def run()
         @bot.listen do |message|
+            next unless message.text
+
             args = message.text.split(" ")
             command = args.shift()
             if command[0]=='/'
@@ -35,7 +37,13 @@ class Bot
                 index = args[0] || -1
                 turn(message.chat.id, index.to_i)
             else
-                @bot.api.send_message(chat_id: message.chat.id, text: "Unknown command")
+                is_integer = Integer(command) rescue false
+                if is_integer
+                    index = command || -1
+                    turn(message.chat.id, index.to_i)
+                else
+                    @bot.api.send_message(chat_id: message.chat.id, text: "Unknown command")
+                end
             end
         end
     end
@@ -68,10 +76,11 @@ class Bot
         end
 
         game[:players][1] = chatId
+        @users[chatId] = game
         @bot.api.send_message(chat_id: chatId, text: "You joined game with #{game[:players][0]}")
 
-        boardString = _prepareBoard(game[:board].board)
         for i in 0..1
+            boardString = _prepareBoard(game[:board].board, i)
             chatId = game[:players][i]
             _sendMessage(chatId, "Game started!\nBoard:\n" + boardString)
         end
@@ -91,22 +100,22 @@ class Bot
         end
 
         board = game[:board]
-        if ! game[:players][board.activePlayer] == chatId
+        unless game[:players][board.activePlayer] == chatId
             _sendMessage(chatId, "It is opponent's turn")
             return
         end
         player = board.activePlayer
 
         begin
-            nextPlayer = board.turn(player, houseIndex);
+            nextPlayer = board.turn(houseIndex);
         rescue ArgumentError => error
             _sendMessage(chatId, "Please validate your command, /sow <index>")
             return
         end
 
-        boardString = _prepareBoard(game[:board].board)
-        _sendMessage(chatId, boardString)
-        _sendMessage(game[:players][player ^ 1], "Opponent sawed #{houseIndex}, board:\n" + boardString);
+        _sendMessage(chatId, _prepareBoard(game[:board].board, player))
+        opponent = (player + 1) % 2
+        _sendMessage(game[:players][opponent], "Opponent sowed #{houseIndex}, board:\n" + _prepareBoard(game[:board].board, opponent));
         if nextPlayer.nil?
             endGame(game)
             return
@@ -127,12 +136,20 @@ class Bot
         return
     end
 
-    def _prepareBoard(board)
+    def _prepareBoard(board, player)
         boardString = ""
+        store = board.size / 2 
+        playerStore = store * (1 + player) - 1
+        playerStart = board.size * player
+        opponentStore = store * (1 + (player + 1) % 2) - 1
+        boardString += "   #{board[opponentStore]} -- Opponent\n"
+
         mirrorHouse = board.size() / 2
-        for i in 0 .. board.size() / 2 - 1
-            boardString += "#{i}: (#{board[i]}) (#{board[i+mirrorHouse]})\n"
+        offset = store * player
+        for i in 0 .. board.size() / 2 - 2
+            boardString += "#{i}: (#{board[(i + offset)]}) (#{board[(store+offset+i) % board.size]})\n"
         end
+        boardString += "   #{board[playerStore]} -- Own\n"
         return boardString
     end
 
