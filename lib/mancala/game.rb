@@ -48,7 +48,7 @@ class Game
             i = (i+1) % @totalHouses
             if (i != opponentsHouse)
                 if (@captureEmpty && seeds == 1 && i != playersHouse && @board[i] == 0)
-                    mirrorHouse = (i + @houses + 1) % @totalHouses
+                    mirrorHouse = (opponentsHouse - 1 - i + indexOffset) % @totalHouses
                     if (i >= indexOffset && i < playersHouse && @board[mirrorHouse] > 0)
                         @board[playersHouse] += 1 + @board[mirrorHouse]
                         @board[mirrorHouse] = 0

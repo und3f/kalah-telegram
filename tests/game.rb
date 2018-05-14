@@ -30,17 +30,17 @@ class TestGame < Test::Unit::TestCase
         assert_equal(0, board.activePlayer())
 
         assert_equal(1, board.turn(0, 1))
-        assert_equal([4, 0, 1, 6, 6, 0, 9, 0, 1, 7, 7, 6, 0, 1],
+        assert_equal([4, 0, 1, 6, 6, 1, 2, 0, 1, 7, 7, 6, 6, 1],
                      board.board())
         assert_equal(1, board.activePlayer())
 
         assert_equal(0, board.turn(1, 1))
-        assert_equal([4, 0, 1, 6, 6, 0, 9, 0, 0, 8, 7, 6, 0, 1],
+        assert_equal([4, 0, 1, 6, 6, 1, 2, 0, 0, 8, 7, 6, 6, 1],
                      board.board())
         assert_equal(0, board.activePlayer())
 
         assert_equal(1, board.turn(0, 0))
-        assert_equal([0, 1, 2, 7, 7, 0, 9, 0, 0, 8, 7, 6, 0, 1],
+        assert_equal([0, 1, 2, 7, 7, 1, 2, 0, 0, 8, 7, 6, 6, 1],
                      board.board())
     end
 
@@ -52,5 +52,15 @@ class TestGame < Test::Unit::TestCase
         )
         assert_equal(nil, board.turn(1, 2))
         assert_equal([18, 18], board.score())
+    end
+
+    def testCapture()
+        board = Game.new(
+            :houses => 6,
+            :board => [1, 1, 0, 5, 10, 1, 7, 1, 0, 7, 7, 0, 0, 8],
+            :activePlayer => 1
+        )
+        assert_equal(0, board.turn(1, 0))
+        assert_equal([1, 1, 0, 5, 0, 1, 7, 0, 0, 7, 7, 0, 0, 19], board.board())
     end
 end
