@@ -1,6 +1,12 @@
 require 'telegram/bot'
 require 'mancala/game.rb'
 
+class Integer
+    def to_s_fw()
+        to_s.chars.map { |c| (c.ord+65248).chr("utf-8") }.join
+    end
+end
+
 class Bot
     attr_reader   :botName
     attr_accessor :games
@@ -149,7 +155,7 @@ class Bot
     end
 
     def _sowMessage(chatId, board)
-        _sendMessage(chatId, "Your turn, choose the house to sow from", reply_markup: _prepareSowKeyboard(board))
+        _sendMessage(chatId, "Your turn, choose the house to sow from")
     end
 
     def _prepareSowKeyboard(board)
@@ -174,19 +180,20 @@ class Bot
     end
 
     def _prepareBoard(board, player)
-        boardString = "<pre>"
+        boardString = ""
         store = board.size / 2 
         playerStore = store * (1 + player) - 1
         opponentStore = store * (1 + (player + 1) % 2) - 1
-        boardString += "     (#{board[opponentStore]}) -- Opponent\n"
+
+        spacing = "\u3000\u3000\u3000\u3000"
+        boardString += "#{spacing}（#{board[opponentStore].to_s_fw}） -- Opponent\n"
 
         mirrorHouse = board.size() / 2
         offset = store * player
         for i in 0 .. board.size() / 2 - 2
-            boardString += "/#{i+1} (#{board[(i + 1 + opponentStore) % board.size]}) (#{board[(playerStore + store - 1 - i) % board.size]})\n"
+            boardString += "/#{i+1}\u3000（#{board[(i + 1 + opponentStore) % board.size].to_s_fw}）\u3000（#{board[(playerStore + store - 1 - i) % board.size].to_s_fw}）\n"
         end
-        boardString += "     (#{board[playerStore]}) -- Own\n"
-        boardString += "</pre>"
+        boardString += "#{spacing}（#{board[playerStore].to_s_fw}） -- Own\n"
         return boardString
     end
 
