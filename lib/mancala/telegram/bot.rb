@@ -2,47 +2,62 @@ require 'telegram/bot'
 require 'mancala/game.rb'
 
 class Bot
+    attr_reader   :botName
     attr_accessor :games
     attr_accessor :users
     attr_accessor :gameId
 
-    def initialize(token)
+    def initialize(token, botName)
+        @botName = botName
         @games = {}
         @users = {}
-        @bot = Telegram::Bot::Client.new(token)
+        @bot = Telegram::Bot::Client.new(token, logger: Logger.new($stderr))
         @gameId = 1
     end
 
     def run()
         @bot.listen do |message|
-            next unless message.text
+            case message
 
-            args = message.text.split(" ")
+            when Telegram::Bot::Types::Message
+                args = message.text.split(" ")
+                chatId = message.chat.id
+            when Telegram::Bot::Types::CallbackQuery
+                args = message.data.split(" ")
+                command = args.shift()
+                chatId = message.from.id
+                @bot.api.answer_callback_query(callback_query_id: message.id)
+            end
+
             command = args.shift()
             if command[0]=='/'
                 command = command[1..-1]
             end
 
+            next if command.nil?
+
             case command.downcase
             when 'start'
-                @bot.api.send_message(chat_id: message.chat.id, text: "Welcome!")
+                unless args[0].nil?
+                    joinGame(chatId, args[0])
+                else
+                    @bot.api.send_message(chat_id: chatId, text: "Welcome!")
+                end
             when 'newgame'
-                newGame(message.chat.id, args)
+                newGame(chatId, args)
             when 'endgame'
-                game = @users[message.chat.id]
+                game = @users[chatId]
                 endGame(game) unless game.nil?
             when 'joingame'
-                joinGame(message.chat.id, args[0])
+                joinGame(chatId, args[0])
             when 'sow'
-                index = args[0] || -1
-                turn(message.chat.id, index.to_i)
+                turn(chatId, args[0].to_i - 1)
             else
                 is_integer = Integer(command) rescue false
                 if is_integer
-                    index = command || -1
-                    turn(message.chat.id, index.to_i)
+                    turn(chatId, command.to_i - 1)
                 else
-                    @bot.api.send_message(chat_id: message.chat.id, text: "Unknown command")
+                    @bot.api.send_message(chat_id: chatId, text: "Unknown command")
                 end
             end
         end
@@ -56,10 +71,12 @@ class Bot
         end
 
         board = Game.new()
-        gameId = @gameId.to_s
+        gameId = @gameId.to_s + "-" + rand(1000).to_s
         @gameId += 1
         @users[chatId] = @games[gameId] = {:board => board, :players => [chatId, nil], :id => gameId}
-        @bot.api.send_message(chat_id: chatId, text: "Game #{gameId} created")
+
+        url = "https://t.me/#{@botName}?start=#{gameId}"
+        @bot.api.send_message(chat_id: chatId, text: "Game created, forward link to a friend #{url}")
     end
 
     def joinGame(chatId, joiningGame)
@@ -82,9 +99,9 @@ class Bot
         for i in 0..1
             boardString = _prepareBoard(game[:board].board, i)
             chatId = game[:players][i]
-            _sendMessage(chatId, "Game started!\nBoard:\n" + boardString)
+            _sendMessage(chatId, "Game started!\nBoard:\n" + boardString, parse_mode: 'HTML')
         end
-        _sendMessage(game[:players][0], "It is your turn, use /sow <index>");
+        _sowMessage(game[:players][0], game[:board])
     end
 
     def turn(chatId, houseIndex)
@@ -113,16 +130,36 @@ class Bot
             return
         end
 
-        _sendMessage(chatId, _prepareBoard(game[:board].board, player))
+        _sendMessage(chatId, _prepareBoard(game[:board].board, player), parse_mode: 'HTML')
         opponent = (player + 1) % 2
-        _sendMessage(game[:players][opponent], "Opponent sowed #{houseIndex}, board:\n" + _prepareBoard(game[:board].board, opponent));
+        houses = board.board.size() / 2 - 1
+        _sendMessage(
+            game[:players][opponent],
+            "Opponent sowed from the house ##{houses-houseIndex}:\n" + _prepareBoard(game[:board].board, opponent),
+            parse_mode: "HTML");
+
         if nextPlayer.nil?
             endGame(game)
             return
         end
 
         chatIdNextPlayer = game[:players][nextPlayer]
-        _sendMessage(chatIdNextPlayer, "Your turn, /sow <index>")
+
+        _sowMessage(chatIdNextPlayer, board)
+    end
+
+    def _sowMessage(chatId, board)
+        _sendMessage(chatId, "Your turn, choose the house to sow from", reply_markup: _prepareSowKeyboard(board))
+    end
+
+    def _prepareSowKeyboard(board)
+        houses = board.board.size() / 2 - 1
+        kb = []
+        for i in 1..houses
+            kb.push(Telegram::Bot::Types::InlineKeyboardButton.new(text: i, callback_data: "sow #{i}"))
+        end
+        markup = Telegram::Bot::Types::InlineKeyboardMarkup.new(inline_keyboard: [kb], one_time_keyboard: true, resize_keyboard: true)
+        return markup
     end
 
     def endGame(game)
@@ -137,23 +174,23 @@ class Bot
     end
 
     def _prepareBoard(board, player)
-        boardString = ""
+        boardString = "<pre>"
         store = board.size / 2 
         playerStore = store * (1 + player) - 1
-        playerStart = board.size * player
         opponentStore = store * (1 + (player + 1) % 2) - 1
-        boardString += "   #{board[opponentStore]} -- Opponent\n"
+        boardString += "     (#{board[opponentStore]}) -- Opponent\n"
 
         mirrorHouse = board.size() / 2
         offset = store * player
         for i in 0 .. board.size() / 2 - 2
-            boardString += "#{i}: (#{board[(i + offset)]}) (#{board[(store+offset+i) % board.size]})\n"
+            boardString += "/#{i+1} (#{board[(i + 1 + opponentStore) % board.size]}) (#{board[(playerStore + store - 1 - i) % board.size]})\n"
         end
-        boardString += "   #{board[playerStore]} -- Own\n"
+        boardString += "     (#{board[playerStore]}) -- Own\n"
+        boardString += "</pre>"
         return boardString
     end
 
-    def _sendMessage(chatId, message)
-        @bot.api.send_message(chat_id: chatId, text: message)
+    def _sendMessage(chatId, message, opts = {})
+        @bot.api.send_message({chat_id: chatId, text: message}.merge(opts))
     end
 end

@@ -2,10 +2,10 @@
 
 require 'mancala/telegram/bot.rb'
 
-token = ARGV[0]
-unless token
-    raise "usage: #$0 <TOKEN>"
+(token, botName) = ARGV
+unless token && botName
+    raise "usage: #$0 <TOKEN> <Bot name>"
 end
 
-bot   = Bot.new(token)
+bot   = Bot.new(token, botName)
 bot.run()
