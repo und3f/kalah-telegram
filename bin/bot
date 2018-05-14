@@ -1,0 +1,11 @@
+#!/usr/bin/env ruby
+
+require 'mancala/telegram/bot.rb'
+
+token = ARGV[0]
+unless token
+    raise "usage: #$0 <TOKEN>"
+end
+
+bot   = Bot.new(token)
+bot.run()

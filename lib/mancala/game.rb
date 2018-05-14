@@ -1,5 +1,5 @@
 class Game
-    def initialize(options)
+    def initialize(options = {})
         @houses = options[:houses] || 6
         @seedsPerHouse = options[:seedsPerHouse] || 4
         @captureEmpty = options[:captureEmpty] || true
@@ -7,7 +7,7 @@ class Game
         @totalHouses = @houses * 2 + 2
         if loadBoard = options[:board]
             if (loadBoard.size() != @totalHouses)
-                raise "Wrong board size"
+                raise ArumentError, "Wrong board size"
             end
             @board = loadBoard
         else
@@ -31,11 +31,11 @@ class Game
 
     def turn(player = @activePlayer, index)
         unless player.equal?(@activePlayer)
-            raise "Wrong player"
+            raise ArgumentError,"Wrong player"
         end
 
         unless index >= 0 && index < @houses
-            raise "Wrong index"
+            raise ArgumentError, "Wrong index"
         end
 
         indexOffset = (@houses + 1) * @activePlayer
