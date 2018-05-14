@@ -52,6 +52,14 @@ class TestGame < Test::Unit::TestCase
         )
         assert_equal(nil, board.turn(1, 2))
         assert_equal([18, 18], board.score())
+
+        board = Game.new(
+            :houses => 3,
+            :board => [0, 0, 1, 18, 5, 3, 1, 17],
+            :activePlayer => 1
+        )
+        assert_equal(nil, board.turn(0, 2))
+        assert_equal([19, 26], board.score())
     end
 
     def testCapture()
