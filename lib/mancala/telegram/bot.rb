@@ -105,6 +105,11 @@ class Bot
             return
         end
 
+        unless game[:players][1].nil?
+            _sendMessage(chatId, "Game already started")
+            return
+        end
+
         game[:players][1] = chatId
         @users[chatId] = game
         @bot.api.send_message(chat_id: chatId, text: "You joined game with #{game[:players][0]}")
@@ -180,7 +185,8 @@ class Bot
     end
 
     def _sowMessage(chatId, board)
-        _sendMessage(chatId, "Your turn, choose the house to sow from")
+        _sendMessage(chatId, "Your turn, choose the house to sow from", 
+                     reply_markup: _prepareSowKeyboard(board))
     end
 
     def _prepareSowKeyboard(board)
@@ -217,14 +223,11 @@ class Bot
 
         spacing = "\u3000\u3000\u3000\u3000"
         boardString += "#{spacing}（#{board[opponentStore].to_s_fw}） -- Opponent\n"
-        isActivePlayer = game.activePlayer == player
 
         for i in 0 .. board.size() / 2 - 2
             playerIndex = (i + 1 + opponentStore) % board.size
 
-            boardString += "/" if isActivePlayer
-            boardString += "#{i+1}\u3000"
-
+            boardString += "#{(i+1).to_s_fw}\u3000"
 
             boardString += "（#{board[playerIndex].to_s_fw}）"
 
