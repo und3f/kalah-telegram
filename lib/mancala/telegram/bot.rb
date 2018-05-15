@@ -134,7 +134,7 @@ class Bot
             chatId = game[:players][i]
             _sendMessage(chatId, "Game started!\nBoard:\n" + boardString, parse_mode: 'HTML')
         end
-        _sowMessage(game[:players][0], game[:board])
+        _sowMessage(game, 0)
     end
 
     def turn(chatId, houseIndex)
@@ -163,10 +163,17 @@ class Bot
             return
         end
 
+        removeKeyboard =  Telegram::Bot::Types::ReplyKeyboardRemove.new(remove_keyboard: true)
+        playerMarkup = [removeKeyboard]
+        playerMarkup.unshift(nil) if (nextPlayer == 0)
+
         _sendMessage(
             chatId,
             "You sowed from the house ##{houseIndex + 1}:\n" + 
-            _prepareBoard(game[:board], player, trace), parse_mode: 'HTML')
+            _prepareBoard(game[:board], player, trace),
+            parse_mode: 'HTML',
+            reply_markup: playerMarkup[player]
+        )
 
         opponent = (player + 1) % 2
         houses = board.board.size() / 2 - 1
@@ -175,7 +182,9 @@ class Bot
             game[:players][opponent],
             "Opponent sowed from the house ##{houses-houseIndex}:\n" + 
             _prepareBoard(game[:board], opponent, trace),
-            parse_mode: "HTML");
+            parse_mode: "HTML",
+            reply_markup: playerMarkup[opponent]
+        );
 
         if nextPlayer.nil?
             score = board.score()
@@ -186,9 +195,7 @@ class Bot
             return
         end
 
-        chatIdNextPlayer = game[:players][nextPlayer]
-
-        _sowMessage(chatIdNextPlayer, board)
+        _sowMessage(game, nextPlayer)
     end
 
     def _sendScoreStatistic(chatId, score)
@@ -205,34 +212,45 @@ class Bot
         _sendMessage(chatId, message)
     end
 
-    def _sowMessage(chatId, board)
+    def _sowMessage(game, player)
+        chatId = game[:players][player]
         _sendMessage(chatId, "Your turn, choose the house to sow from", 
-                     reply_markup: _prepareSowKeyboard(board))
+                     reply_markup: _prepareSowKeyboard(game, player))
     end
 
-    def _prepareSowKeyboard(board)
-        houses = board.board.size() / 2 - 1
+    def _prepareSowKeyboard(game, player)
+        board = game[:board].board
+        numberOfHouses = board.size() / 2 - 1
+        indexOffset = player * (numberOfHouses + 1) - 1
+
         kb = []
-        maxPerRow = 5
-        for i in 1..houses
-            if (i - 1) % maxPerRow == 0
-                row = []
-                kb.push(row)
-            end
-            row.push(Telegram::Bot::Types::InlineKeyboardButton.new(text: i, callback_data: "sow #{i}"))
+        for i in 1..numberOfHouses
+            kb.push(Telegram::Bot::Types::KeyboardButton.new(text: i, callback_data: "sow #{i}"))
         end
 
-        keyboard = kb
+        if (kb.size() < 8)
+            keyboard = [kb]
+        else 
+            maxPerRow = 5
+            keyboard = []
+            while !kb.empty?
+                keyboard.push(kb.slice!(0 .. maxPerRow-1))
+            end
+        end
 
-        markup = Telegram::Bot::Types::InlineKeyboardMarkup.new(inline_keyboard: keyboard, one_time_keyboard: true, resize_keyboard: true)
+        markup = Telegram::Bot::Types::ReplyKeyboardMarkup.new(
+            keyboard: keyboard, 
+            resize_keyboard: true)
+
         return markup
     end
 
     def endGame(game)
+        removeKeyboard =  Telegram::Bot::Types::ReplyKeyboardRemove.new(remove_keyboard: true)
         for i in 0..1
             chatId = game[:players][i]
             next if chatId.nil?
-            _sendMessage(chatId, "Game ended.")
+            _sendMessage(chatId, "Game ended.", reply_markup: removeKeyboard)
             @users.delete(chatId)
         end
         @games.delete(game[:id])
