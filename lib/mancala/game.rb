@@ -44,16 +44,18 @@ class Game
         i = index + indexOffset
         seeds = @board[i]
         @board[i] = 0
+        touchedHouses = []
         while (seeds > 0)
             i = (i+1) % @totalHouses
             if (i != opponentsHouse)
+                touchedHouses.push(i)
                 if (@captureEmpty && seeds == 1 && i != playersHouse && @board[i] == 0)
                     mirrorHouse = (opponentsHouse - 1 - i + indexOffset) % @totalHouses
                     if (i >= indexOffset && i < playersHouse && @board[mirrorHouse] > 0)
                         @board[playersHouse] += 1 + @board[mirrorHouse]
                         @board[mirrorHouse] = 0
                         seeds -= 1
-                        next
+                        break
                     end
                 end
                 @board[i] += 1
@@ -67,7 +69,7 @@ class Game
 
         @activePlayer = nil if _check_game_finished()
 
-        return @activePlayer
+        return @activePlayer, touchedHouses
     end
 
     def score()
