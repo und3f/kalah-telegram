@@ -91,7 +91,13 @@ class Bot
             return
         end
 
-        board = Game.new()
+        boardSize = args[0].to_i
+        boardSize = 6 if boardSize < 1
+
+        seedsPerHouse = args[1].to_i
+        seedsPerHouse = 4 if seedsPerHouse < 1
+
+        board = Game.new(:houses => boardSize, :seedsPerHouse => seedsPerHouse)
         gameId = @gameId.to_s + "-" + rand(1000).to_s
         @gameId += 1
         @users[chatId] = @games[gameId] = {:board => board, :players => [chatId, nil], :id => gameId}
@@ -202,10 +208,18 @@ class Bot
     def _prepareSowKeyboard(board)
         houses = board.board.size() / 2 - 1
         kb = []
+        maxPerRow = 5
         for i in 1..houses
-            kb.push(Telegram::Bot::Types::InlineKeyboardButton.new(text: i, callback_data: "sow #{i}"))
+            if (i - 1) % maxPerRow == 0
+                row = []
+                kb.push(row)
+            end
+            row.push(Telegram::Bot::Types::InlineKeyboardButton.new(text: i, callback_data: "sow #{i}"))
         end
-        markup = Telegram::Bot::Types::InlineKeyboardMarkup.new(inline_keyboard: [kb], one_time_keyboard: true, resize_keyboard: true)
+
+        keyboard = kb
+
+        markup = Telegram::Bot::Types::InlineKeyboardMarkup.new(inline_keyboard: keyboard, one_time_keyboard: true, resize_keyboard: true)
         return markup
     end
 
@@ -234,10 +248,12 @@ class Bot
         boardString = "<pre>"
         boardString +=  _boardStore(board[opponentStore], "Opponent", spaceInterval-2, trace.include?(opponentStore))
 
+        indexOffset = (board.size()/2 - 1).digits.size
+
         for i in 0 .. board.size() / 2 - 2
             playerIndex = (i + 1 + opponentStore) % board.size
 
-            boardString += "#{(i+1).to_s_fw}\u3000"
+            boardString += sprintf("%#{indexOffset}i ", i+1);
 
             boardString += _boardHouse(board[playerIndex], trace.include?(playerIndex), true)
 
