@@ -2,8 +2,13 @@ require 'telegram/bot'
 require 'mancala/game.rb'
 
 class Integer
+    def digits(base: 10)
+        quotient, remainder = divmod(base)
+        quotient == 0 ? [remainder] : [*quotient.digits(base: base), remainder]
+    end
+
     def to_s_fw()
-        to_s.chars.map { |c| (c.ord+65248).chr("utf-8") }.join
+        digits.map { |c| (c + "\uff10".ord()).chr("utf-8") }.join
     end
 end
 
@@ -206,16 +211,29 @@ class Bot
         playerStore = store * (1 + player) - 1
         opponentStore = store * (1 + (player + 1) % 2) - 1
 
+        playersStart = (1 + opponentStore) % board.size
+        playersEnd   = (opponentStore - 1) % board.size
+        spaceInterval = board[playersStart, playersEnd].max.digits.size+1
+
         spacing = "\u3000\u3000\u3000\u3000"
         boardString += "#{spacing}（#{board[opponentStore].to_s_fw}） -- Opponent\n"
         isActivePlayer = game.activePlayer == player
 
         for i in 0 .. board.size() / 2 - 2
             playerIndex = (i + 1 + opponentStore) % board.size
-            if isActivePlayer
-                boardString += "/" 
-            end
-            boardString += "#{i+1}\u3000（#{board[playerIndex].to_s_fw}）\u3000（#{board[(playerStore + store - 1 - i) % board.size].to_s_fw}）\n"
+
+            boardString += "/" if isActivePlayer
+            boardString += "#{i+1}\u3000"
+
+
+            boardString += "（#{board[playerIndex].to_s_fw}）"
+
+            currentSpace = spaceInterval - board[playerIndex].digits.size
+            currentSpace.times {
+                boardString += "\u3000"
+            }
+
+            boardString += "（#{board[(playerStore + store - 1 - i) % board.size].to_s_fw}）\n"
         end
         boardString += "#{spacing}（#{board[playerStore].to_s_fw}） -- Own\n"
         return boardString
