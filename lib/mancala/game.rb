@@ -43,6 +43,11 @@ class Game
         opponentsHouse = (playersHouse + 1 + @houses) % @totalHouses
         i = index + indexOffset
         seeds = @board[i]
+
+        if seeds == 0
+            raise ArgumentError, "Empty house"
+        end
+
         @board[i] = 0
         touchedHouses = []
         while (seeds > 0)
