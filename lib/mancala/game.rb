@@ -73,22 +73,26 @@ class Game
     end
 
     def score()
-        captureHouse1 = @houses
-        captureHouse2 = @houses * 2 + 1
-        return [@board[captureHouse1], @board[captureHouse2]]
+        score1 = 0
+        score2 = 0
+        for i in (0 .. @houses)
+            score1 += @board[i]
+            score2 += @board[i + 1 + @houses]
+        end
+        return [score1, score2]
     end
 
     def _check_game_finished()
-        captureHouse1 = @houses
-        captureHouse2 = @houses * 2 + 1
-        @board.each_with_index do |element, index|
-            if (index == captureHouse1 || index == captureHouse2)
-                next
+        lastHouseIndex = @houses - 2
+        for player in (0..1)
+            offset = @houses * player
+
+            i = 0
+            for i in (0 .. lastHouseIndex)
+                break if @board[i+offset] > 0
             end
-            if element > 0
-                return false
-            end
+            return true if i == lastHouseIndex
         end
-        return true;
+        return false;
     end
 end
