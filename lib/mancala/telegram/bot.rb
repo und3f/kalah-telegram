@@ -280,7 +280,7 @@ class Bot
     end
 
     def _boardHouse(value, width, emphasis = false, left = true)
-        str = emphasis && left ? "*" : " "
+        str = emphasis && left ? "+" : " "
         str += sprintf("(%#{width}i)", value)
         str += "+" if emphasis && !left
         return str
@@ -296,7 +296,7 @@ class Bot
         }
 
         boardString += "#{caption} " unless left
-        boardString += emphasis && left ? "*" : " "
+        boardString += emphasis && left ? "+" : " "
         boardString += sprintf("(%#{width}i)", value)
         boardString += "+" if emphasis and !left
         boardString += " #{caption}" if left
