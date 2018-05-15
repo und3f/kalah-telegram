@@ -255,18 +255,18 @@ class Bot
 
     def _boardHouse(value, emphasis)
         str = ""
-        str += "<strong>" if emphasis
+        str += "<code>" if emphasis
         str += "（#{value.to_s_fw}）"
-        str += "</strong>" if emphasis
+        str += "</code>" if emphasis
         return str
     end
 
     def _boardStore(value, caption, emphasis)
         spacing = "\u3000\u3000\u3000\u3000"
         boardString = "#{spacing}"
-        boardString += "<b>" if (emphasis)
+        boardString += "<code>" if (emphasis)
         boardString += "（#{value.to_s_fw}）"
-        boardString += "</b>" if (emphasis)
+        boardString += "</code>" if (emphasis)
         boardString += " #{caption}\n"
         return boardString
     end
