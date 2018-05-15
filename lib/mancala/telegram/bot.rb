@@ -30,7 +30,8 @@ class Bot
         @bot.listen do |message|
             begin
                 _process_message(message)
-            rescue
+            rescue StandardError => error
+                @bot.logger.error(error)
             end
         end
     end
@@ -230,43 +231,46 @@ class Bot
         playersEnd   = (opponentStore - 1) % board.size
         spaceInterval = board[playersStart, playersEnd].max.digits.size+1
 
-        boardString += _boardStore(board[opponentStore], "Opponent", trace.include?(opponentStore))
+        boardString = "<pre>"
+        boardString +=  _boardStore(board[opponentStore], "Opponent", spaceInterval-2, trace.include?(opponentStore))
 
         for i in 0 .. board.size() / 2 - 2
             playerIndex = (i + 1 + opponentStore) % board.size
 
             boardString += "#{(i+1).to_s_fw}\u3000"
 
-            boardString += _boardHouse(board[playerIndex], trace.include?(playerIndex))
+            boardString += _boardHouse(board[playerIndex], trace.include?(playerIndex), true)
 
             currentSpace = spaceInterval - board[playerIndex].digits.size
             currentSpace.times {
-                boardString += "\u3000"
+                boardString += " "
             }
 
             opponentIndex = (playerStore + store - 1 - i) % board.size
-            boardString += _boardHouse(board[opponentIndex], trace.include?(opponentIndex))
+            boardString += _boardHouse(board[opponentIndex], trace.include?(opponentIndex), false)
             boardString += "\n"
         end
 
-        boardString += _boardStore(board[playerStore], "Own", trace.include?(playerStore))
+        boardString += _boardStore(board[playerStore], "Own", spaceInterval-2, trace.include?(playerStore), false)
+        boardString += "</pre>"
         return boardString
     end
 
-    def _boardHouse(value, emphasis)
-        str = ""
-        str += "<code>" if emphasis
-        str += "（#{value.to_s_fw}）"
-        str += "</code>" if emphasis
+    def _boardHouse(value, emphasis, left = true)
+        str = emphasis && left ? "*" : " "
+        str += "(#{value})"
+        str += "*" if emphasis && !left
         return str
     end
 
-    def _boardStore(value, caption, emphasis)
-        spacing = "\u3000\u3000\u3000\u3000"
-        boardString = "#{spacing}"
-        boardString += "<code>" if (emphasis)
-        boardString += "（#{value.to_s_fw}）"
-        boardString += "</code>" if (emphasis)
+    def _boardStore(value, caption, extraSpacing = 0, emphasis = false, left = true)
+        boardString = "      "
+        extraSpacing.times {
+            boardString += " "
+        }
+        boardString += emphasis && left ? "*" : " "
+        boardString += "(#{value})"
+        boardString += "*" if emphasis and !left
         boardString += " #{caption}\n"
         return boardString
     end
