@@ -28,50 +28,57 @@ class Bot
 
     def run()
         @bot.listen do |message|
-            case message
-
-            when Telegram::Bot::Types::Message
-                next if message.text.nil?
-                args = message.text.split(" ")
-                chatId = message.chat.id
-            when Telegram::Bot::Types::CallbackQuery
-                next if message.data.nil?
-                args = message.data.split(" ")
-                command = args.shift()
-                chatId = message.from.id
-                @bot.api.answer_callback_query(callback_query_id: message.id)
+            begin
+                _process_message(message)
+            rescue
             end
+        end
+    end
 
+    def _process_message(message)
+        case message
+
+        when Telegram::Bot::Types::Message
+            return if message.text.nil?
+            args = message.text.split(" ")
+            chatId = message.chat.id
+        when Telegram::Bot::Types::CallbackQuery
+            return if message.data.nil?
+            args = message.data.split(" ")
             command = args.shift()
-            if command[0]=='/'
-                command = command[1..-1]
-            end
+            chatId = message.from.id
+            @bot.api.answer_callback_query(callback_query_id: message.id)
+        end
 
-            next if command.nil?
+        command = args.shift()
+        if command[0]=='/'
+            command = command[1..-1]
+        end
 
-            case command.downcase
-            when 'start'
-                unless args[0].nil?
-                    joinGame(chatId, args[0])
-                else
-                    @bot.api.send_message(chat_id: chatId, text: "Welcome!")
-                end
-            when 'newgame'
-                newGame(chatId, args)
-            when 'endgame'
-                game = @users[chatId]
-                endGame(game) unless game.nil?
-            when 'joingame'
+        return if command.nil?
+
+        case command.downcase
+        when 'start'
+            unless args[0].nil?
                 joinGame(chatId, args[0])
-            when 'sow'
-                turn(chatId, args[0].to_i - 1)
             else
-                is_integer = Integer(command) rescue false
-                if is_integer
-                    turn(chatId, command.to_i - 1)
-                else
-                    @bot.api.send_message(chat_id: chatId, text: "Unknown command")
-                end
+                @bot.api.send_message(chat_id: chatId, text: "Welcome!")
+            end
+        when 'newgame'
+            newGame(chatId, args)
+        when 'endgame'
+            game = @users[chatId]
+            endGame(game) unless game.nil?
+        when 'joingame'
+            joinGame(chatId, args[0])
+        when 'sow'
+            turn(chatId, args[0].to_i - 1)
+        else
+            is_integer = Integer(command) rescue false
+            if is_integer
+                turn(chatId, command.to_i - 1)
+            else
+                @bot.api.send_message(chat_id: chatId, text: "Unknown command")
             end
         end
     end
@@ -111,6 +118,7 @@ class Bot
         end
 
         game[:players][1] = chatId
+        game[:players] = game[:players].reverse
         @users[chatId] = game
         @bot.api.send_message(chat_id: chatId, text: "You joined game with #{game[:players][0]}")
 
@@ -142,18 +150,19 @@ class Bot
         player = board.activePlayer
 
         begin
-            nextPlayer = board.turn(houseIndex);
+            nextPlayer,trace = board.turn(houseIndex);
         rescue ArgumentError
             _sendMessage(chatId, "Please validate your command, /sow <index>")
             return
         end
 
-        _sendMessage(chatId, _prepareBoard(game[:board], player), parse_mode: 'HTML')
+        _sendMessage(chatId, _prepareBoard(game[:board], player, trace), parse_mode: 'HTML')
         opponent = (player + 1) % 2
         houses = board.board.size() / 2 - 1
         _sendMessage(
             game[:players][opponent],
-            "Opponent sowed from the house ##{houses-houseIndex}:\n" + _prepareBoard(game[:board], opponent),
+            "Opponent sowed from the house ##{houses-houseIndex}:\n" + 
+            _prepareBoard(game[:board], opponent, trace),
             parse_mode: "HTML");
 
         if nextPlayer.nil?
@@ -210,7 +219,7 @@ class Bot
         return
     end
 
-    def _prepareBoard(game, player)
+    def _prepareBoard(game, player, trace=[])
         board=game.board
         boardString = ""
         store = board.size / 2 
@@ -221,24 +230,44 @@ class Bot
         playersEnd   = (opponentStore - 1) % board.size
         spaceInterval = board[playersStart, playersEnd].max.digits.size+1
 
-        spacing = "\u3000\u3000\u3000\u3000"
-        boardString += "#{spacing}（#{board[opponentStore].to_s_fw}） -- Opponent\n"
+        boardString += _boardStore(board[opponentStore], "Opponent", trace.include?(opponentStore))
 
         for i in 0 .. board.size() / 2 - 2
             playerIndex = (i + 1 + opponentStore) % board.size
 
             boardString += "#{(i+1).to_s_fw}\u3000"
 
-            boardString += "（#{board[playerIndex].to_s_fw}）"
+            boardString += _boardHouse(board[playerIndex], trace.include?(playerIndex))
 
             currentSpace = spaceInterval - board[playerIndex].digits.size
             currentSpace.times {
                 boardString += "\u3000"
             }
 
-            boardString += "（#{board[(playerStore + store - 1 - i) % board.size].to_s_fw}）\n"
+            opponentIndex = (playerStore + store - 1 - i) % board.size
+            boardString += _boardHouse(board[opponentIndex], trace.include?(opponentIndex))
+            boardString += "\n"
         end
-        boardString += "#{spacing}（#{board[playerStore].to_s_fw}） -- Own\n"
+
+        boardString += _boardStore(board[playerStore], "Own", trace.include?(playerStore))
+        return boardString
+    end
+
+    def _boardHouse(value, emphasis)
+        str = ""
+        str += "<strong>" if emphasis
+        str += "（#{value.to_s_fw}）"
+        str += "</strong>" if emphasis
+        return str
+    end
+
+    def _boardStore(value, caption, emphasis)
+        spacing = "\u3000\u3000\u3000\u3000"
+        boardString = "#{spacing}"
+        boardString += "<b>" if (emphasis)
+        boardString += "（#{value.to_s_fw}）"
+        boardString += "</b>" if (emphasis)
+        boardString += " #{caption}\n"
         return boardString
     end
 
