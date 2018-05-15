@@ -163,9 +163,14 @@ class Bot
             return
         end
 
-        _sendMessage(chatId, _prepareBoard(game[:board], player, trace), parse_mode: 'HTML')
+        _sendMessage(
+            chatId,
+            "You sowed from the house ##{houseIndex + 1}:\n" + 
+            _prepareBoard(game[:board], player, trace), parse_mode: 'HTML')
+
         opponent = (player + 1) % 2
         houses = board.board.size() / 2 - 1
+
         _sendMessage(
             game[:players][opponent],
             "Opponent sowed from the house ##{houses-houseIndex}:\n" + 
@@ -243,51 +248,59 @@ class Bot
 
         playersStart = (1 + opponentStore) % board.size
         playersEnd   = (opponentStore - 1) % board.size
-        spaceInterval = board[playersStart, playersEnd].max.digits.size+1
+        houseWidth = board.max.digits.size
 
         boardString = "<pre>"
-        boardString +=  _boardStore(board[opponentStore], "Opponent", spaceInterval-2, trace.include?(opponentStore))
-
         indexOffset = (board.size()/2 - 1).digits.size
+
+        spacing = ""
+        (houseWidth+3).times {
+            spacing += " "
+        }
+
+        boardString +=  _boardStore(board[opponentStore], "Opponent", indexOffset, houseWidth, trace.include?(opponentStore))
 
         for i in 0 .. board.size() / 2 - 2
             playerIndex = (i + 1 + opponentStore) % board.size
 
             boardString += sprintf("%#{indexOffset}i ", i+1);
 
-            boardString += _boardHouse(board[playerIndex], trace.include?(playerIndex), true)
+            boardString += _boardHouse(board[playerIndex], houseWidth, trace.include?(playerIndex), true)
 
-            currentSpace = spaceInterval - board[playerIndex].digits.size
-            currentSpace.times {
-                boardString += " "
-            }
+            boardString += spacing
 
             opponentIndex = (playerStore + store - 1 - i) % board.size
-            boardString += _boardHouse(board[opponentIndex], trace.include?(opponentIndex), false)
+            boardString += _boardHouse(board[opponentIndex], houseWidth, trace.include?(opponentIndex), false)
             boardString += "\n"
         end
 
-        boardString += _boardStore(board[playerStore], "Own", spaceInterval-2, trace.include?(playerStore), false)
+        boardString += _boardStore(board[playerStore], "Me", indexOffset, houseWidth, trace.include?(playerStore), false)
         boardString += "</pre>"
         return boardString
     end
 
-    def _boardHouse(value, emphasis, left = true)
+    def _boardHouse(value, width, emphasis = false, left = true)
         str = emphasis && left ? "*" : " "
-        str += "(#{value})"
-        str += "*" if emphasis && !left
+        str += sprintf("(%#{width}i)", value)
+        str += "+" if emphasis && !left
         return str
     end
 
-    def _boardStore(value, caption, extraSpacing = 0, emphasis = false, left = true)
-        boardString = "      "
-        extraSpacing.times {
+    def _boardStore(value, caption, offset, width, emphasis = false, left = true)
+        boardString = ""
+
+        captionSize = 0
+        captionSize = caption.size() + 1 unless left
+        (offset + 2 + width + 2 - captionSize).times {
             boardString += " "
         }
+
+        boardString += "#{caption} " unless left
         boardString += emphasis && left ? "*" : " "
-        boardString += "(#{value})"
-        boardString += "*" if emphasis and !left
-        boardString += " #{caption}\n"
+        boardString += sprintf("(%#{width}i)", value)
+        boardString += "+" if emphasis and !left
+        boardString += " #{caption}" if left
+        boardString += "\n"
         return boardString
     end
 
