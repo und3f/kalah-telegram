@@ -63,11 +63,9 @@ class Game
 
         if (i != playersHouse)
             @activePlayer = (@activePlayer + 1) % 2
-        else
-            if(_check_game_finished())
-                @activePlayer = nil
-            end
         end
+
+        @activePlayer = nil if _check_game_finished()
 
         return @activePlayer
     end
@@ -83,15 +81,19 @@ class Game
     end
 
     def _check_game_finished()
-        lastHouseIndex = @houses - 2
+        lastHouseIndex = @houses - 1
         for player in (0..1)
-            offset = @houses * player
+            offset = (1 + @houses) * player
 
             i = 0
+            emptyHouses = true
             for i in (0 .. lastHouseIndex)
-                break if @board[i+offset] > 0
+                if @board[i+offset] > 0
+                    emptyHouses = false
+                    break
+                end
             end
-            return true if i == lastHouseIndex
+            return true if emptyHouses
         end
         return false;
     end

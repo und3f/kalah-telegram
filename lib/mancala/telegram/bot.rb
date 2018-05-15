@@ -26,9 +26,11 @@ class Bot
             case message
 
             when Telegram::Bot::Types::Message
+                next if message.text.nil?
                 args = message.text.split(" ")
                 chatId = message.chat.id
             when Telegram::Bot::Types::CallbackQuery
+                next if message.data.nil?
                 args = message.data.split(" ")
                 command = args.shift()
                 chatId = message.from.id
@@ -103,7 +105,7 @@ class Bot
         @bot.api.send_message(chat_id: chatId, text: "You joined game with #{game[:players][0]}")
 
         for i in 0..1
-            boardString = _prepareBoard(game[:board].board, i)
+            boardString = _prepareBoard(game[:board], i)
             chatId = game[:players][i]
             _sendMessage(chatId, "Game started!\nBoard:\n" + boardString, parse_mode: 'HTML')
         end
@@ -113,7 +115,7 @@ class Bot
     def turn(chatId, houseIndex)
         game = @users[chatId]
         if game.nil?
-            _sendMessage(chatId, "There are no game")
+            _sendMessage(chatId, "There is no game")
             return
         end
 
@@ -131,20 +133,24 @@ class Bot
 
         begin
             nextPlayer = board.turn(houseIndex);
-        rescue ArgumentError => error
+        rescue ArgumentError
             _sendMessage(chatId, "Please validate your command, /sow <index>")
             return
         end
 
-        _sendMessage(chatId, _prepareBoard(game[:board].board, player), parse_mode: 'HTML')
+        _sendMessage(chatId, _prepareBoard(game[:board], player), parse_mode: 'HTML')
         opponent = (player + 1) % 2
         houses = board.board.size() / 2 - 1
         _sendMessage(
             game[:players][opponent],
-            "Opponent sowed from the house ##{houses-houseIndex}:\n" + _prepareBoard(game[:board].board, opponent),
+            "Opponent sowed from the house ##{houses-houseIndex}:\n" + _prepareBoard(game[:board], opponent),
             parse_mode: "HTML");
 
         if nextPlayer.nil?
+            score = board.score()
+            _sendScoreStatistic(game[:players][0], score)
+            _sendScoreStatistic(game[:players][1], score.reverse)
+
             endGame(game)
             return
         end
@@ -152,6 +158,20 @@ class Bot
         chatIdNextPlayer = game[:players][nextPlayer]
 
         _sowMessage(chatIdNextPlayer, board)
+    end
+
+    def _sendScoreStatistic(chatId, score)
+        message = ""
+        if score[0] == score[1]
+            message += "Draw!"
+        elsif score[0] > score[1]
+            message += "You win!"
+        else
+            message += "You lose. Better luck next time!!"
+        end
+
+        message += "\nYou #{score[0]} - Opponent #{score[1]}"
+        _sendMessage(chatId, message)
     end
 
     def _sowMessage(chatId, board)
@@ -179,7 +199,8 @@ class Bot
         return
     end
 
-    def _prepareBoard(board, player)
+    def _prepareBoard(game, player)
+        board=game.board
         boardString = ""
         store = board.size / 2 
         playerStore = store * (1 + player) - 1
@@ -187,11 +208,14 @@ class Bot
 
         spacing = "\u3000\u3000\u3000\u3000"
         boardString += "#{spacing}（#{board[opponentStore].to_s_fw}） -- Opponent\n"
+        isActivePlayer = game.activePlayer == player
 
-        mirrorHouse = board.size() / 2
-        offset = store * player
         for i in 0 .. board.size() / 2 - 2
-            boardString += "/#{i+1}\u3000（#{board[(i + 1 + opponentStore) % board.size].to_s_fw}）\u3000（#{board[(playerStore + store - 1 - i) % board.size].to_s_fw}）\n"
+            playerIndex = (i + 1 + opponentStore) % board.size
+            if isActivePlayer
+                boardString += "/" 
+            end
+            boardString += "#{i+1}\u3000（#{board[playerIndex].to_s_fw}）\u3000（#{board[(playerStore + store - 1 - i) % board.size].to_s_fw}）\n"
         end
         boardString += "#{spacing}（#{board[playerStore].to_s_fw}） -- Own\n"
         return boardString
