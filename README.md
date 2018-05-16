@@ -2,7 +2,7 @@
 Kalah game Telegram Bot
 
 # Demonstration
-Try out live version of this bothttps://t.me/kalahbot
+Try out live version of this bot [@KalahBot](https://t.me/kalahbot)
 
 # Install requirements
 bundle
