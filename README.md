@@ -1,5 +1,8 @@
-# mancala-telegram
-Mancala game Telegram Bot
+# kalah-telegram
+Kalah game Telegram Bot
+
+# Demonstration
+Try out live version of this bothttps://t.me/kalahbot
 
 # Install requirements
 bundle
