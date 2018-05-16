@@ -27,11 +27,21 @@ class Bot
     end
 
     def run()
-        @bot.listen do |message|
+        @bot.logger.info("Starting bot")
+        running = true
+        Signal.trap('INT') { running = false }
+        while running
             begin
-                _process_message(message)
+                @bot.fetch_updates do |message|
+                    begin
+                        _process_message(message)
+                    rescue StandardError => error
+                        @bot.logger.error(error)
+                    end
+                end
             rescue StandardError => error
                 @bot.logger.error(error)
+                sleep 1
             end
         end
     end
