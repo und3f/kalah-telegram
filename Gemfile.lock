@@ -15,11 +15,14 @@ GEM
     ice_nine (0.11.2)
     inflecto (0.0.2)
     multipart-post (2.0.0)
+    power_assert (1.1.1)
     rake (12.3.1)
     telegram-bot-ruby (0.8.6.1)
       faraday
       inflecto
       virtus
+    test-unit (3.2.8)
+      power_assert
     thread_safe (0.3.6)
     virtus (1.0.5)
       axiom-types (~> 0.1)
@@ -33,6 +36,7 @@ PLATFORMS
 DEPENDENCIES
   rake
   telegram-bot-ruby
+  test-unit
 
 BUNDLED WITH
    1.13.6
