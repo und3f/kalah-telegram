@@ -1,11 +1,11 @@
 #!/usr/bin/env ruby
 
-require 'mancala/telegram/bot.rb'
+require 'kalah/telegram/bot.rb'
 
 (token, botName) = ARGV
 unless token && botName
     raise "usage: #$0 <TOKEN> <Bot name>"
 end
 
-bot   = Bot.new(token, botName)
+bot   = Kalah::Telegram::Bot.new(token, botName)
 bot.run()

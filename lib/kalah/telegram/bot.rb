@@ -1,5 +1,8 @@
 require 'telegram/bot'
-require 'mancala/game.rb'
+require 'kalah/game.rb'
+
+module Kalah::Telegram
+end
 
 class Integer
     def digits(base: 10)
@@ -12,7 +15,7 @@ class Integer
     end
 end
 
-class Bot
+class Kalah::Telegram::Bot
     attr_reader   :botName
     attr_accessor :games
     attr_accessor :users
@@ -107,7 +110,7 @@ class Bot
         seedsPerHouse = args[1].to_i
         seedsPerHouse = 4 if seedsPerHouse < 1
 
-        board = Game.new(:houses => boardSize, :seedsPerHouse => seedsPerHouse)
+        board = Kalah::Game.new(:houses => boardSize, :seedsPerHouse => seedsPerHouse)
         gameId = @gameId.to_s + "-" + rand(1000).to_s
         @gameId += 1
         @users[chatId] = @games[gameId] = {:board => board, :players => [chatId, nil], :id => gameId}

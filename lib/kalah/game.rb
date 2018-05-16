@@ -1,4 +1,7 @@
-class Game
+module Kalah
+end
+
+class Kalah::Game
     def initialize(options = {})
         @houses = options[:houses] || 6
         @seedsPerHouse = options[:seedsPerHouse] || 4

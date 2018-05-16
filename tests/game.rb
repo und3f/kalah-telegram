@@ -1,9 +1,9 @@
-require "mancala/game.rb"
+require "kalah/game.rb"
 require "test/unit"
 
 class TestGame < Test::Unit::TestCase
     def testBoard()
-        board = Game.new(:houses => 6)
+        board = Kalah::Game.new(:houses => 6)
         assert_equal([4, 4, 4, 4, 4, 4, 0, 4, 4, 4, 4, 4, 4, 0],
                      board.board())
 
@@ -49,7 +49,7 @@ class TestGame < Test::Unit::TestCase
     end
 
     def testEndGame()
-        board = Game.new(
+        board = Kalah::Game.new(
             :houses => 3,
             :board => [0, 0, 1, 18, 5, 3, 1, 17],
             :activePlayer => 0
@@ -59,7 +59,7 @@ class TestGame < Test::Unit::TestCase
     end
 
     def testCapture()
-        board = Game.new(
+        board = Kalah::Game.new(
             :houses => 6,
             :board => [1, 1, 0, 5, 10, 1, 7, 1, 0, 7, 7, 0, 0, 8],
             :activePlayer => 1
